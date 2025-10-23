@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini AI Hackathon App</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .function-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .function-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            background: #f0f0f0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .function-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .function-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            resize: vertical;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+        
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Gemini AI Hackathon App</h1>
+        
+        <div class="feature-card">
+            <h3>AI-Powered Text Processing</h3>
+            <p>Select a function and enter your text to see Gemini AI in action!</p>
+        </div>
+        
+        <div class="function-buttons">
+            <button class="function-btn active" data-function="general">💬 General Chat</button>
+            <button class="function-btn" data-function="summarize">📝 Summarize</button>
+            <button class="function-btn" data-function="rewrite">✍️ Rewrite</button>
+            <button class="function-btn" data-function="translate">🌐 Translate</button>
+            <button class="function-btn" data-function="proofread">✅ Proofread</button>
+        </div>
+        
+        <textarea id="promptInput" placeholder="Enter your text here..."></textarea>
+        
+        <button onclick="processText()">Process with Gemini AI</button>
+        
+        <div class="loading" id="loading">
+            Processing with Gemini AI...
+        </div>
+        
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        let currentFunction = 'general';
+        
+        // Function button handling
+        document.querySelectorAll('.function-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.function-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentFunction = this.dataset.function;
+                
+                // Update placeholder based on function
+                const placeholderTexts = {
+                    'general': 'Ask me anything...',
+                    'summarize': 'Enter text to summarize...',
+                    'rewrite': 'Enter text to rewrite...',
+                    'translate': 'Enter text to translate to English...',
+                    'proofread': 'Enter text to proofread...'
+                };
+                document.getElementById('promptInput').placeholder = placeholderTexts[currentFunction];
+            });
+        });
+        
+        async function processText() {
+            const prompt = document.getElementById('promptInput').value;
+            const resultDiv = document.getElementById('result');
+            const loadingDiv = document.getElementById('loading');
+            
+            if (!prompt.trim()) {
+                alert('Please enter some text!');
+                return;
+            }
+            
+            loadingDiv.style.display = 'block';
+            resultDiv.innerHTML = '';
+            
+            try {
+                const response = await fetch('/process/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        function_type: currentFunction
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    resultDiv.innerHTML = `<strong>Error:</strong> ${data.error}`;
+                } else {
+                    resultDiv.innerHTML = `
+                        <strong>Function: ${data.function_used}</strong>
+                        <hr>
+                        <p>${data.result.replace(/\n/g, '<br>')}</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+        
+        // Helper function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Allow Enter key to submit (with Ctrl/Cmd)
+        document.getElementById('promptInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                processText();
+            }
+        });
+    </script>
+</body>
+</html>
